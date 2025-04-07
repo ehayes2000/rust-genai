@@ -1,7 +1,7 @@
+use crate::adapter::AdapterKind;
 use crate::adapter::adapters::support::{StreamerCapturedData, StreamerOptions};
 use crate::adapter::inter_stream::{InterStreamEnd, InterStreamEvent};
 use crate::adapter::openai::OpenAIAdapter;
-use crate::adapter::AdapterKind;
 use crate::chat::ChatOptionsSet;
 use crate::{Error, ModelIden, Result};
 use reqwest_eventsource::{Event, EventSource};
@@ -142,7 +142,7 @@ impl futures::Stream for OpenAIStreamer {
 						// If we do not have content, then log a trace message
 						else {
 							// TODO: use tracing debug
-							println!("EMPTY CHOICE CONTENT");
+							tracing::warn!("EMPTY CHOICE CONTENT");
 						}
 					}
 					// -- Usage message
@@ -161,7 +161,7 @@ impl futures::Stream for OpenAIStreamer {
 					}
 				}
 				Some(Err(err)) => {
-					println!("Error: {}", err);
+					tracing::error!("Error: {}", err);
 					return Poll::Ready(Some(Err(Error::ReqwestEventSource(err))));
 				}
 				None => {

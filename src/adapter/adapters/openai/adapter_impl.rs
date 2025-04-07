@@ -3,7 +3,7 @@ use crate::adapter::openai::OpenAIStreamer;
 use crate::adapter::{Adapter, AdapterDispatcher, AdapterKind, ServiceType, WebRequestData};
 use crate::chat::{
 	ChatOptionsSet, ChatRequest, ChatResponse, ChatResponseFormat, ChatRole, ChatStream, ChatStreamResponse,
-	ContentPart, ImageSource, MessageContent, MetaUsage, ReasoningEffort, ToolCall,
+	ContentPart, ImageSource, MessageContent, ReasoningEffort, ToolCall, Usage,
 };
 use crate::resolver::{AuthData, Endpoint};
 use crate::webc::WebResponse;
@@ -12,7 +12,7 @@ use crate::{ModelIden, ServiceTarget};
 use reqwest::RequestBuilder;
 use reqwest_eventsource::EventSource;
 use serde::Deserialize;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use value_ext::JsonValueExt;
 
 pub struct OpenAIAdapter;
@@ -32,13 +32,13 @@ impl OpenAIAdapter {
 }
 
 impl Adapter for OpenAIAdapter {
+	fn default_auth() -> AuthData {
+		AuthData::from_env(Self::API_KEY_DEFAULT_ENV_NAME)
+	}
+
 	fn default_endpoint() -> Endpoint {
 		const BASE_URL: &str = "https://api.openai.com/v1/";
 		Endpoint::from_static(BASE_URL)
-	}
-
-	fn default_auth() -> AuthData {
-		AuthData::from_env(Self::API_KEY_DEFAULT_ENV_NAME)
 	}
 
 	/// Note: Currently returns the common models (see above)
@@ -65,6 +65,10 @@ impl Adapter for OpenAIAdapter {
 		options_set: ChatOptionsSet<'_, '_>,
 	) -> Result<ChatResponse> {
 		let WebResponse { mut body, .. } = web_response;
+
+		// -- Capture the provider_model_iden
+		let provider_model_name: Option<String> = body.x_remove("model").ok();
+		let provider_model_iden = model_iden.with_name_or_clone(provider_model_name);
 
 		// -- Capture the usage
 		let usage = body.x_take("usage").map(OpenAIAdapter::into_usage).unwrap_or_default();
@@ -103,6 +107,7 @@ impl Adapter for OpenAIAdapter {
 			content,
 			reasoning_content,
 			model_iden,
+			provider_model_iden,
 			usage,
 		})
 	}
@@ -257,15 +262,10 @@ impl OpenAIAdapter {
 
 	/// Note: Needs to be called from super::streamer as well
 	#[allow(deprecated)]
-	pub(super) fn into_usage(usage_value: Value) -> MetaUsage {
+	pub(super) fn into_usage(usage_value: Value) -> Usage {
 		// NOTE: here we make sure we do not fail since we do not want to break a response because usage parsing fail
 		// TODO: Should have some tracing.
-		let mut usage: MetaUsage = serde_json::from_value(usage_value).unwrap_or_default();
-
-		// Legacy support
-		usage.input_tokens = usage.prompt_tokens;
-		usage.output_tokens = usage.completion_tokens;
-
+		let usage: Usage = serde_json::from_value(usage_value).unwrap_or_default();
 		usage
 	}
 
@@ -295,23 +295,25 @@ impl OpenAIAdapter {
 					let content = match msg.content {
 						MessageContent::Text(content) => json!(content),
 						MessageContent::Parts(parts) => {
-							json!(parts
-								.iter()
-								.map(|part| match part {
-									ContentPart::Text(text) => json!({"type": "text", "text": text.clone()}),
-									ContentPart::Image { content_type, source } => {
-										match source {
-											ImageSource::Url(url) => {
-												json!({"type": "image_url", "image_url": {"url": url}})
-											}
-											ImageSource::Base64(content) => {
-												let image_url = format!("data:{content_type};base64,{content}");
-												json!({"type": "image_url", "image_url": {"url": image_url}})
+							json!(
+								parts
+									.iter()
+									.map(|part| match part {
+										ContentPart::Text(text) => json!({"type": "text", "text": text.clone()}),
+										ContentPart::Image { content_type, source } => {
+											match source {
+												ImageSource::Url(url) => {
+													json!({"type": "image_url", "image_url": {"url": url}})
+												}
+												ImageSource::Base64(content) => {
+													let image_url = format!("data:{content_type};base64,{content}");
+													json!({"type": "image_url", "image_url": {"url": image_url}})
+												}
 											}
 										}
-									}
-								})
-								.collect::<Vec<Value>>())
+									})
+									.collect::<Vec<Value>>()
+							)
 						}
 						// Use `match` instead of `if let`. This will allow to future-proof this
 						// implementation in case some new message content types would appear,
@@ -466,7 +468,7 @@ fn parse_tool_call(raw_tool_call: Value) -> Result<ToolCall> {
 		_ => {
 			return Err(Error::InvalidJsonResponseElement {
 				info: "tool call arguments is not an object",
-			})
+			});
 		}
 	};
 

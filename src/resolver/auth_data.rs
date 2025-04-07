@@ -9,6 +9,7 @@ pub enum AuthData {
 	/// The key value itself.
 	Key(String),
 
+	/// Override headers and request url for unorthodox authentication schemes
 	RequestOverride {
 		url: String,
 		headers: Vec<(String, String)>,
@@ -43,6 +44,8 @@ impl AuthData {
 	/// Get the single value from the `AuthData`.
 	pub fn single_key_value(&self) -> Result<String> {
 		match self {
+			// Overrides don't use an api key
+			AuthData::RequestOverride { .. } => Ok(String::new()),
 			AuthData::FromEnv(env_name) => {
 				// Get value from the environment name.
 				let value = std::env::var(env_name).map_err(|_| Error::ApiKeyEnvNotFound {
@@ -52,8 +55,6 @@ impl AuthData {
 			}
 			AuthData::Key(value) => Ok(value.to_string()),
 			AuthData::MultiKeys(_) => Err(Error::ResolverAuthDataNotSingleValue),
-			// use an empty key for request override
-			AuthData::RequestOverride { .. } => Ok(String::new()),
 		}
 	}
 }

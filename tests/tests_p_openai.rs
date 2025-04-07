@@ -1,12 +1,13 @@
 mod support;
 
-use crate::support::{common_tests, Check};
+use crate::support::{Check, common_tests};
 use genai::adapter::AdapterKind;
 use genai::resolver::AuthData;
 
 type Result<T> = core::result::Result<T, Box<dyn std::error::Error>>; // For tests.
 
 const MODEL: &str = "gpt-4o-mini";
+// const MODEL: &str = "gpt-4o";
 
 // region:    --- Chat
 

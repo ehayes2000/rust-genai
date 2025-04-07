@@ -1,9 +1,9 @@
 //! This support module is for common constructs and utilities for all the adapter implementations.
 //! It should be private to the `crate::adapter::adapters` module.
 
-use crate::chat::{ChatOptionsSet, MetaUsage};
-use crate::resolver::AuthData;
 use crate::ModelIden;
+use crate::chat::{ChatOptionsSet, Usage};
+use crate::resolver::AuthData;
 use crate::{Error, Result};
 
 pub fn get_api_key(auth: AuthData, model: &ModelIden) -> Result<String> {
@@ -40,7 +40,7 @@ impl StreamerOptions {
 
 #[derive(Debug, Default)]
 pub struct StreamerCapturedData {
-	pub usage: Option<MetaUsage>,
+	pub usage: Option<Usage>,
 	pub content: Option<String>,
 	pub reasoning_content: Option<String>,
 }

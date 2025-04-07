@@ -1,14 +1,16 @@
 //! This example demonstrates how to properly attach image to the conversations
 
+use genai::Client;
 use genai::chat::printer::print_chat_stream;
 use genai::chat::{ChatMessage, ChatRequest, ContentPart};
-use genai::Client;
 
 const MODEL: &str = "gpt-4o-mini";
 const IMAGE_URL: &str = "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Gfp-wisconsin-madison-the-nature-boardwalk.jpg/2560px-Gfp-wisconsin-madison-the-nature-boardwalk.jpg";
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+	tracing_subscriber::fmt().with_max_level(tracing::Level::DEBUG).init();
+
 	let client = Client::default();
 
 	let question = "What is in this picture?";

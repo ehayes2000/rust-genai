@@ -1,6 +1,6 @@
 # genai - Multi-AI Providers Library for Rust
 
-Currently supports natively: **DeepSeek** (deepseek.com & Groq), **OpenAI**, **Anthropic**, **Groq**, **Ollama**, **Gemini**, **Cohere** (more to come)
+Currently supports natively: **DeepSeek** (deepseek.com & Groq), **OpenAI**, **Anthropic**, **Gemini**, **XAI/Grok**, **Ollama**,  **Groq**,  **Cohere** (more to come)
 
 <div align="center">
 
@@ -10,19 +10,29 @@ Currently supports natively: **DeepSeek** (deepseek.com & Groq), **OpenAI**, **A
 
 </div>
 
-```toml
-# cargo.toml
-genai = "0.1.22"
-```
-
 <br />
 
 Provides a common and ergonomic single API to many generative AI providers, such as Anthropic, OpenAI, Gemini, xAI, Ollama, Groq, and more.
 
 Check out [devai.run](https://devai.run), the **Iterate to Automate** command-line application that leverages **genai** for multi-AI capabilities.
 
+## v0.2.0.rc
+
+Main branch is now on v0.2.0.rc. GenAI will now follow semver more strictly when API changes are made (even small ones). The two upcoming changes are relatively minor, but they are still changes.
+
+- `chat::MetaUsage` has been renamed to `chat::Usage`
+- `Usage.input_tokens` to `Usage.prompt_tokens` 
+- `Usage.prompt_tokens` to `Usage.completion_tokens`
+- `ChatMessage` now takes an additional property, `options: MessageOptions` with and optional `cache_control` (`CacheControl::Ephemeral`)
+	- This is for the now supported Anthropic caching scheme (which can save 90% on input tokens).
+	- Should be relative transparent when use `ChatMessage::user...` and such. 
+	- Unused on OpenAI APIs/Adapters as it supports it transparently.
+	- Google/Gemini caching is not supported at this point, as it is a totally different scheme (requiring a separate request).
+
+
 ## Thanks
 
+- [@jBernavaPrah](https://github.com/jBernavaPrah) For adding tracing (it was long overdue). [PR #45](https://github.com/jeremychone/rust-genai/pull/45)
 - [@GustavoWidman](https://github.com/GustavoWidman) for the intial gemini tool/function support!! [PR #41](https://github.com/jeremychone/rust-genai/pull/41)
 - [@AdamStrojek](https://github.com/AdamStrojek) for initial image support [PR #36](https://github.com/jeremychone/rust-genai/pull/36)
 - [@semtexzv](https://github.com/semtexzv) for `stop_sequences` Anthropic support [PR #34](https://github.com/jeremychone/rust-genai/pull/34)
@@ -32,17 +42,16 @@ Check out [devai.run](https://devai.run), the **Iterate to Automate** command-li
 - [@stargazing-dino](https://github.com/stargazing-dino) for [PR #2](https://github.com/jeremychone/rust-genai/pull/2) - implement Groq completions
 
 
-
 ## Key Features
 
-- DeepSeekR1 support, with `reasoning_content` (and stream support) + DeepSeek Groq and Ollama support (and `reasoning_content` normalization)
 - Native Multi-AI Provider/Model: OpenAI, Anthropic, Gemini, Ollama, Groq, xAI, DeepSeek (Direct chat and stream) (see [examples/c00-readme.rs](examples/c00-readme.rs))
+- DeepSeekR1 support, with `reasoning_content` (and stream support) + DeepSeek Groq and Ollama support (and `reasoning_content` normalization)
 - Image Analysis (for OpenAI, Gemini flash-2, Anthropic) (see [examples/c07-image.rs](examples/c07-image.rs))
 - Custom Auth/API Key (see [examples/c02-auth.rs](examples/c02-auth.rs))
 - Model Alias (see [examples/c05-model-names.rs](examples/c05-model-names.rs))
 - Custom Endpoint, Auth, and Model Identifier (see [examples/c06-target-resolver.rs](examples/c06-target-resolver.rs))
 
-[Examples](#examples) | [Thanks](#thanks) | [Library Focus](#library-focus) | [Changelog](CHANGELOG.md) | Provider Mapping: [ChatOptions](#chatoptions) | [MetaUsage](#metausage)
+[Examples](#examples) | [Thanks](#thanks) | [Library Focus](#library-focus) | [Changelog](CHANGELOG.md) | Provider Mapping: [ChatOptions](#chatoptions) | [Usage](#usage)
 
 ## Examples
 
@@ -168,10 +177,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 - Initially, this library will mostly focus on text chat API (images, or even function calling in the first stage).
 
-- The `0.1.x` version will work, but the APIs will change in the patch version, not following semver strictly.
-
-- Version `0.2.x` will follow semver more strictly.
-
 ## ChatOptions
 
 - **(1)** - **OpenAI compatibles** notes
@@ -183,14 +188,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 | `max_tokens`  | `max_tokens`            | `max_tokens` (default 1024) | `maxOutputTokens`          | `max_tokens`  |
 | `top_p`       | `top_p`                 | `top_p`                     | `topP`                     | `p`           |
 
-## MetaUsage
+## Usage
 
 | Property                    | OpenAI Compatibles (1)      | Anthropic `usage.`      | Gemini `usageMetadata.`    | Cohere `meta.tokens.` |
 |-----------------------------|-----------------------------|-------------------------|----------------------------|-----------------------|
 | `prompt_tokens`             | `prompt_tokens`             | `input_tokens` (added)  | `promptTokenCount` (2)     | `input_tokens`        |
 | `completion_tokens`         | `completion_tokens`         | `output_tokens` (added) | `candidatesTokenCount` (2) | `output_tokens`       |
 | `total_tokens`              | `total_tokens`              | (computed)              | `totalTokenCount`  (2)     | (computed)            |
-| `prompt_tokens_details`     | `prompt_tokens_details`     | N/A for now             | N/A for now                | N/A for now           |
+| `prompt_tokens_details`     | `prompt_tokens_details`     | `cached/cache_creation` | N/A for now                | N/A for now           |
 | `completion_tokens_details` | `completion_tokens_details` | N/A for now             | N/A for now                | N/A for now           |
 
 

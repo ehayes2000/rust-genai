@@ -1,13 +1,15 @@
 //! Example demonstrating how to create a conversation with GenAI.
 
+use genai::Client;
 use genai::chat::printer::print_chat_stream;
 use genai::chat::{ChatMessage, ChatRequest};
-use genai::Client;
 
 const MODEL: &str = "gpt-4o-mini";
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+	tracing_subscriber::fmt().with_max_level(tracing::Level::DEBUG).init();
+
 	let questions = &[
 		// Follow-up questions
 		"Why is the sky blue?",

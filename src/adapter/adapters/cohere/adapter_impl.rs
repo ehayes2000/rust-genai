@@ -2,14 +2,14 @@ use crate::adapter::adapters::support::get_api_key;
 use crate::adapter::cohere::CohereStreamer;
 use crate::adapter::{Adapter, AdapterKind, ServiceType, WebRequestData};
 use crate::chat::{
-	ChatOptionsSet, ChatRequest, ChatResponse, ChatRole, ChatStream, ChatStreamResponse, MessageContent, MetaUsage,
+	ChatOptionsSet, ChatRequest, ChatResponse, ChatRole, ChatStream, ChatStreamResponse, MessageContent, Usage,
 };
 use crate::resolver::{AuthData, Endpoint};
 use crate::webc::{WebResponse, WebStream};
 use crate::{Error, Result};
 use crate::{ModelIden, ServiceTarget};
 use reqwest::RequestBuilder;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use value_ext::JsonValueExt;
 
 pub struct CohereAdapter;
@@ -120,6 +120,12 @@ impl Adapter for CohereAdapter {
 	) -> Result<ChatResponse> {
 		let WebResponse { mut body, .. } = web_response;
 
+		// -- Capture the provider_model_iden
+		// TODO: Need to be implemented (if available), for now, just clone model_iden
+		// let provider_model_name: Option<String> = body.x_remove("model").ok();
+		let provider_model_name = None;
+		let provider_model_iden = model_iden.with_name_or_clone(provider_model_name);
+
 		// -- Get usage
 		let usage = body.x_take("/meta/tokens").map(Self::into_usage).unwrap_or_default();
 
@@ -136,6 +142,7 @@ impl Adapter for CohereAdapter {
 			content,
 			reasoning_content: None,
 			model_iden,
+			provider_model_iden,
 			usage,
 		})
 	}
@@ -167,7 +174,7 @@ impl CohereAdapter {
 	///    "output_tokens": 24
 	///  }
 	/// ```
-	pub(super) fn into_usage(mut usage_value: Value) -> MetaUsage {
+	pub(super) fn into_usage(mut usage_value: Value) -> Usage {
 		let prompt_tokens: Option<i32> = usage_value.x_take("input_tokens").ok();
 		let completion_tokens: Option<i32> = usage_value.x_take("output_tokens").ok();
 
@@ -178,12 +185,8 @@ impl CohereAdapter {
 			None
 		};
 
-		// legacy
-		let input_tokens = prompt_tokens;
-		let output_tokens = prompt_tokens;
-
 		#[allow(deprecated)]
-		MetaUsage {
+		Usage {
 			prompt_tokens,
 			// for now, None for Cohere
 			prompt_tokens_details: None,
@@ -193,10 +196,6 @@ impl CohereAdapter {
 			completion_tokens_details: None,
 
 			total_tokens,
-
-			// -- Legacy
-			input_tokens,
-			output_tokens,
 		}
 	}
 
@@ -251,7 +250,7 @@ impl CohereAdapter {
 					return Err(Error::MessageRoleNotSupported {
 						model_iden,
 						role: ChatRole::Tool,
-					})
+					});
 				}
 			}
 		}

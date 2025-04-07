@@ -2,13 +2,13 @@
 //! This example uses the AuthData::Override feature which enables request url and headers to be overriden
 
 use gcp_auth::{CustomServiceAccount, TokenProvider};
+use genai::Client;
+use genai::ModelIden;
 use genai::adapter::AdapterKind;
 use genai::chat::printer::print_chat_stream;
 use genai::chat::{ChatMessage, ChatRequest};
 use genai::resolver::Error;
 use genai::resolver::{AuthData, AuthResolver};
-use genai::Client;
-use genai::ModelIden;
 
 const MODEL: &str = "gemini-2.0-flash";
 
@@ -37,9 +37,9 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
 		})?;
 		// for url
 		let url = format!(
-      	"https://{}-aiplatform.googleapis.com/v1/projects/{}/locations/{}/publishers/google/models/{}:generateContent",
-      	location, project_id, location, model.model_name
-      );
+			"https://{}-aiplatform.googleapis.com/v1/projects/{}/locations/{}/publishers/google/models/{}:generateContent",
+			location, project_id, location, model.model_name
+		);
 		// put bearer in headers
 		let auth_header = vec![("Authorization".to_string(), format!("Bearer {}", token.as_str()))];
 		// cowabunga

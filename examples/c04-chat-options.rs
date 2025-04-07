@@ -15,6 +15,8 @@ const MODEL: &str = "gemma:2b";
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+	tracing_subscriber::fmt().with_max_level(tracing::Level::DEBUG).init();
+
 	let question = "Why is the sky red?";
 
 	// -- Global ChatOptions
@@ -36,7 +38,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 	println!("\n--- Question:\n{question}");
 	let chat_res = client.exec_chat_stream(MODEL, chat_req.clone(), Some(&options)).await?;
 
-	let adapter_kind = client.resolve_service_target(MODEL)?.model.adapter_kind;
+	let adapter_kind = client.resolve_service_target(MODEL).await?.model.adapter_kind;
 	println!("\n--- Answer: ({MODEL} - {adapter_kind})");
 	print_chat_stream(chat_res, None).await?;
 

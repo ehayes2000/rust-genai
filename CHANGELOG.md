@@ -1,6 +1,28 @@
 `.` minor | `-` Fix | `+` Addition | `^` improvement | `!` Change | `*` Refactor
 
-> - API changes will be denoted as "`!` - **API CHANGE** ...."
+## 2025-04-06 - [v0.2.0-rc.5](https://github.com/jeremychone/rust-genai/compare/v0.2.0-rc.2...v0.2.0-rc.5)
+
+- `!` **API-CHANGE** - Now `client.resolve_service_target(model)` is ASYNC, so, `client.resolve_service_target(model).await`
+- `^` `AuthResolver` - Now allow async resolver function/closure (Fn) as well as sync ones
+- `^` `ServiceTargetResolver` - Now allow async resolver function/closure (Fn) as well as sync ones
+- Now `edition = 2024`
+
+## 2025-03-29 - [v0.2.0-rc.2](https://github.com/jeremychone/rust-genai/compare/v0.2.0-rc.1...v0.2.0-rc.2)
+
+- `+` Add `ChatResponse.provider_model_iden` – This will be the model returned by the provider, or a clone of the one sent if the provider does not return it or if it doesn't match.
+
+## 2025-03-09 - [v0.2.0-rc.1](https://github.com/jeremychone/rust-genai/compare/v0.1.23...v0.2.0-rc.1)
+
+- `+` Anthropic - Support for `cache_control` at the message level
+- **API-CHANGES**
+  - `chat::MetaUsage` has been renamed to `chat::Usage`
+  - `Usage.input_tokens` to `Usage.prompt_tokens` 
+  - `Usage.prompt_tokens` to `Usage.completion_tokens`
+  - `ChatMessage` now takes an additional property, `options: MessageOptions` with and optional `cache_control` (`CacheControl::Ephemeral`)
+  	- This is for the now supported Anthropic caching scheme (which can save 90% on input tokens).
+  	- Should be relative transparent when use `ChatMessage::user...` and such. 
+  	- Unused on OpenAI APIs/Adapters as it supports it transparently.
+  	- Google/Gemini caching is not supported at this point, as it is a totally different scheme (requiring a separate request).
 
 ## 2025-02-25 - [v0.1.23](https://github.com/jeremychone/rust-genai/compare/v0.1.22...v0.1.23)
 
@@ -10,9 +32,7 @@
 ## 2025-02-22 - [v0.1.22](https://github.com/jeremychone/rust-genai/compare/v0.1.21...v0.1.22)
 
 - `+` Tool - Add support Gemini for tool calls and responses (thanks to - [@GustavoWidman](https://github.com/GustavoWidman) - [PR #41](https://github.com/jeremychone/rust-genai/pull/41))
-
 - `*` reqwest - Use rustls-tls now (can add feature later if needed) 
-
 - `.` tokio - narrow tokio features 
 
 

@@ -2,9 +2,8 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::chat::{ChatStream, MessageContent, ToolCall};
 use crate::ModelIden;
-use serde_with::{serde_as, skip_serializing_none};
+use crate::chat::{ChatStream, MessageContent, ToolCall, Usage};
 
 // region:    --- ChatResponse
 
@@ -17,12 +16,18 @@ pub struct ChatResponse {
 	/// The eventual reasoning content,
 	pub reasoning_content: Option<String>,
 
-	/// The Model Identifier (AdapterKind/ModelName) used for this request.
-	/// > NOTE: This might be different from the request model if changed by the ModelMapper
+	/// The resolved Model Identifier (AdapterKind/ModelName) used for this request.
+	/// > NOTE 1: This might be different from the request model if changed by the ModelMapper
+	/// > NOTE 2: This might also be different than the used_model_iden as this will be the one returned by the AI Provider for this request
 	pub model_iden: ModelIden,
 
+	/// The provider model iden. Will be `model_iden` if not returned or mapped, but can be different.
+	/// For example, `gpt-4o` model_iden might have a provider_model_iden as `gpt-4o-2024-08-06`
+	pub provider_model_iden: ModelIden,
+
+	// pub model
 	/// The eventual usage of the chat response
-	pub usage: MetaUsage,
+	pub usage: Usage,
 }
 
 // Getters
@@ -70,54 +75,3 @@ pub struct ChatStreamResponse {
 }
 
 // endregion: --- ChatStreamResponse
-
-// region:    --- MetaUsage
-
-/// IMPORTANT: This is **NOT SUPPORTED** for now. To indicate the API direction.
-#[serde_as]
-#[skip_serializing_none]
-#[derive(Default, Debug, Clone, Serialize, Deserialize)]
-pub struct MetaUsage {
-	/// The input tokens (replaces input_tokens)
-	pub prompt_tokens: Option<i32>,
-	pub prompt_tokens_details: Option<PromptTokensDetails>,
-
-	/// The completions/output tokens
-	pub completion_tokens: Option<i32>,
-	pub completion_tokens_details: Option<CompletionTokensDetails>,
-
-	/// The total number of tokens if returned by the API call.
-	/// This will either be the total_tokens if returned, or the sum of prompt/completion if not specified in the response.
-	pub total_tokens: Option<i32>,
-
-	// -- Deprecated
-	/// The number of input tokens if returned by the API call.
-	#[deprecated(note = "Use prompt_tokens (for now it is a clone, but later will be removed)")]
-	#[serde(skip)]
-	pub input_tokens: Option<i32>,
-
-	/// The number of output tokens if returned by the API call.
-	#[deprecated(note = "Use prompt_tokens (for now it is a clone, but later will be removed)")]
-	#[serde(skip)]
-	pub output_tokens: Option<i32>,
-}
-
-#[serde_as]
-#[skip_serializing_none]
-#[derive(Default, Debug, Clone, Serialize, Deserialize)]
-pub struct PromptTokensDetails {
-	pub cached_tokens: Option<i32>,
-	pub audio_tokens: Option<i32>,
-}
-
-#[serde_as]
-#[skip_serializing_none]
-#[derive(Default, Debug, Clone, Serialize, Deserialize)]
-pub struct CompletionTokensDetails {
-	pub accepted_prediction_tokens: Option<i32>,
-	pub rejected_prediction_tokens: Option<i32>,
-	pub reasoning_tokens: Option<i32>,
-	pub audio_tokens: Option<i32>,
-}
-
-// endregion: --- MetaUsage

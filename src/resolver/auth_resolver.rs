@@ -6,8 +6,8 @@
 //!
 //! Note: `AuthData` is typically a single value but can be multiple for future adapters (e.g., AWS Bedrock).
 
-use crate::resolver::{AuthData, Error, Result};
 use crate::ModelIden;
+use crate::resolver::{AuthData, Result};
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
@@ -15,12 +15,11 @@ use std::sync::Arc;
 // region:    --- AuthResolver
 
 /// Holder for the `AuthResolver` function.
-/// NOTE: Eventually, we might also have a `ResolveAsyncFn`, hence the enum.
 #[derive(Debug, Clone)]
 pub enum AuthResolver {
 	/// The `AuthResolverFn` trait object.
 	ResolverFn(Arc<Box<dyn AuthResolverFn>>),
-	///
+	/// The `AuthResolverAsyncFn` trait object.
 	ResolverAsyncFn(Arc<Box<dyn AuthResolverAsyncFn>>),
 }
 
@@ -35,33 +34,18 @@ impl AuthResolver {
 }
 
 impl AuthResolver {
-	#[deprecated(note = "use resolve_async")]
-	pub(crate) fn resolve(&self, model_iden: ModelIden) -> Result<Option<AuthData>> {
+	pub(crate) async fn resolve(&self, model_iden: ModelIden) -> Result<Option<AuthData>> {
 		match self {
-			AuthResolver::ResolverFn(resolver_fn) => {
-				// Clone the Arc to get a new reference to the Box, then call exec_fn.
-				resolver_fn.exec_fn(model_iden)
-			}
-			AuthResolver::ResolverAsyncFn(_) => Err(Error::UnsupportedUsageOfAsyncResolver(
-				"Use non-async resolver or use AuthResolver::resolve_async".to_string(),
-			)),
+			AuthResolver::ResolverFn(resolver_fn) => resolver_fn.clone().exec_fn(model_iden),
+			AuthResolver::ResolverAsyncFn(resolver_fn) => resolver_fn.exec_fn(model_iden).await,
 		}
 	}
-	pub(crate) async fn resolve_async(&self, model_iden: ModelIden) -> Result<Option<AuthData>> {
-		match self {
-			AuthResolver::ResolverFn(resolver_fn) => {
-				// Clone the Arc to get a new reference to the Box, then call exec_fn.
-				resolver_fn.clone().exec_fn(model_iden)
-			}
-			AuthResolver::ResolverAsyncFn(resolver_fn) => resolver_fn.clone().exec_fn(model_iden).await,
-		}
-	}
+	// pub(crate) async fn resolve_or_default(&self, ())
 }
 
 // endregion: --- AuthResolver
 
 // region:    --- AuthResolverFn
-
 /// The `AuthResolverFn` trait object.
 pub trait AuthResolverFn: Send + Sync {
 	/// Execute the `AuthResolverFn` to get the `AuthData`.
@@ -124,7 +108,7 @@ where
 // endregion: --- IntoAuthResolverFn
 
 pub trait AuthResolverAsyncFn: Send + Sync {
-	/// Execute the `AuthResolverFn` to get the `AuthData`.
+	/// Execute the `AuthResolverAsyncFn` to get the `AuthData`.
 	fn exec_fn(&self, model_iden: ModelIden) -> Pin<Box<dyn Future<Output = Result<Option<AuthData>>>>>;
 
 	///	Clone the trait object.

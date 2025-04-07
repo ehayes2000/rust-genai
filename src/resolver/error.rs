@@ -15,9 +15,6 @@ pub enum Error {
 	/// The `AuthData` is not a single value.
 	ResolverAuthDataNotSingleValue,
 
-	/// Async auth resolvers can only be used from methods returning futures
-	UnsupportedUsageOfAsyncResolver(String),
-
 	/// Call to an external api failed
 	External(Box<dyn std::error::Error>),
 

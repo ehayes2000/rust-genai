@@ -1,6 +1,6 @@
 use crate::adapter::adapters::support::{StreamerCapturedData, StreamerOptions};
 use crate::adapter::inter_stream::{InterStreamEnd, InterStreamEvent};
-use crate::chat::{ChatOptionsSet, MetaUsage};
+use crate::chat::{ChatOptionsSet, Usage};
 use crate::{Error, ModelIden, Result};
 use reqwest_eventsource::{Event, EventSource};
 use serde_json::Value;
@@ -110,11 +110,11 @@ impl futures::Stream for AnthropicStreamer {
 						}
 
 						"ping" => continue, // Loop to the next event
-						other => println!("UNKNOWN MESSAGE TYPE: {other}"),
+						other => tracing::warn!("UNKNOWN MESSAGE TYPE: {other}"),
 					}
 				}
 				Some(Err(err)) => {
-					println!("Error: {}", err);
+					tracing::error!("Error: {}", err);
 					return Poll::Ready(Some(Err(Error::ReqwestEventSource(err))));
 				}
 				None => return Poll::Ready(None),
@@ -137,7 +137,7 @@ impl AnthropicStreamer {
 				("/usage/input_tokens", "/usage/output_tokens")
 			} else {
 				// TODO: Use tracing
-				println!(
+				tracing::debug!(
 					"TRACING DEBUG - Anthropic message type not supported for input/output tokens: {message_type}"
 				);
 				return Ok(()); // For now permissive
@@ -149,7 +149,7 @@ impl AnthropicStreamer {
 				let val = self
 					.captured_data
 					.usage
-					.get_or_insert(MetaUsage::default())
+					.get_or_insert(Usage::default())
 					.prompt_tokens
 					.get_or_insert(0);
 				*val += input_tokens;
@@ -159,7 +159,7 @@ impl AnthropicStreamer {
 				let val = self
 					.captured_data
 					.usage
-					.get_or_insert(MetaUsage::default())
+					.get_or_insert(Usage::default())
 					.completion_tokens
 					.get_or_insert(0);
 				*val += output_tokens;

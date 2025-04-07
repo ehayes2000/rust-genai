@@ -31,22 +31,21 @@ impl Client {
 	}
 
 	#[deprecated(note = "use `client.resolve_service_target(model_name)`")]
-	pub fn resolve_model_iden(&self, model_name: &str) -> Result<ModelIden> {
+	pub async fn resolve_model_iden(&self, model_name: &str) -> Result<ModelIden> {
 		let model = self.default_model(model_name)?;
-		let target = self.config().resolve_service_target(model)?;
+		let target = self.config().resolve_service_target(model).await?;
 		Ok(target.model)
 	}
 
-	pub fn resolve_service_target(&self, model_name: &str) -> Result<ServiceTarget> {
+	pub async fn resolve_service_target(&self, model_name: &str) -> Result<ServiceTarget> {
 		let model = self.default_model(model_name)?;
-		self.config().resolve_service_target(model)
+		self.config().resolve_service_target(model).await
 	}
 
 	pub async fn resolve_service_target_async(&self, model_name: &str) -> Result<ServiceTarget> {
 		let model = self.default_model(model_name)?;
-		self.config().resolve_service_target_async(model).await
+		self.config().resolve_service_target(model).await
 	}
-
 	/// Executes a chat.
 	pub async fn exec_chat(
 		&self,
@@ -60,7 +59,7 @@ impl Client {
 			.with_client_options(self.config().chat_options());
 
 		let model = self.default_model(model)?;
-		let target = self.config().resolve_service_target_async(model).await?;
+		let target = self.config().resolve_service_target(model).await?;
 		let model = target.model.clone();
 
 		let override_auth = if let AuthData::RequestOverride { url, headers } = &target.auth {
@@ -106,7 +105,7 @@ impl Client {
 			.with_client_options(self.config().chat_options());
 
 		let model = self.default_model(model)?;
-		let target = self.config().resolve_service_target_async(model.clone()).await?;
+		let target = self.config().resolve_service_target(model.clone()).await?;
 
 		let override_auth = if let AuthData::RequestOverride { url, headers } = &target.auth {
 			Some((url.to_owned(), headers.to_owned()))
